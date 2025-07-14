@@ -25,7 +25,7 @@ def predict():
         features = data['features']
         input_array = np.array(features).reshape(1, -1)
 
-        prediction = model.predict(features)
+        prediction = model.predict(input_array)
         return jsonify({'risk': int(prediction[0])})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
