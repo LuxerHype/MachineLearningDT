@@ -1,22 +1,63 @@
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split, cross_val_score
 import numpy as np
 import joblib
 
-# Ejemplo de entrenamiento con 10 características por muestra
-# Cada fila representa: [corriente, temperatura, presión, eficiencia, voltajeTotal,
-# hidrógeno/s, tempAmbiente, coefConvectivo, resistenciaInterna, numCeldas]
-X = np.array([
-    [20.0, 50.0, 1.0, 0.9, 2.2, 0.0015, 25.0, 5.0, 0.02, 10],
-    [25.0, 60.0, 1.2, 0.85, 2.6, 0.0020, 25.0, 5.0, 0.025, 10],
-    [15.0, 45.0, 1.0, 0.95, 2.0, 0.0012, 25.0, 5.0, 0.018, 10],
-    [30.0, 70.0, 1.3, 0.8, 2.9, 0.0025, 25.0, 5.0, 0.03, 10]
+# 1. Datos de ejemplo ampliados (idealmente reemplázalos con datos reales)
+#    Aquí generamos 100 muestras sintéticas para ilustrar.
+np.random.seed(42)
+n_samples = 100
+
+corriente = np.random.uniform(10, 30, n_samples)
+temperatura = np.random.uniform(40, 80, n_samples)
+presion = np.random.uniform(0.8, 1.4, n_samples)
+eficiencia = np.random.uniform(0.75, 0.98, n_samples)
+voltajeTotal = np.random.uniform(1.8, 3.0, n_samples)
+produccion = np.random.uniform(0.0005, 0.003, n_samples)
+tempAmb = np.full(n_samples, 25.0)
+coefConv = np.full(n_samples, 5.0)
+resInterna = np.random.uniform(0.015, 0.03, n_samples)
+numCeldas = np.full(n_samples, 10.0)
+
+# Construir matriz X de forma (n_samples, 10)
+X = np.vstack([
+    corriente,
+    temperatura,
+    presion,
+    eficiencia,
+    voltajeTotal,
+    produccion,
+    tempAmb,
+    coefConv,
+    resInterna,
+    numCeldas
+]).T
+
+# 2. Etiquetas sintéticas: definimos riesgo=1 cuando corriente y temp altas + baja eficiencia
+y = ((corriente > 25) & (temperatura > 65) & (eficiencia < 0.85)).astype(int)
+
+# 3. Separar en entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 4. Crear pipeline con escalado y modelo
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('clf', LogisticRegression())
 ])
-# Etiquetas: 0 = sin riesgo, 1 = riesgo
-y = np.array([0, 1, 0, 1])
 
-# Entrenar el modelo
-model = LogisticRegression()
-model.fit(X, y)
+# 5. Entrenamiento con validación cruzada
+scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='accuracy')
+print(f"Accuracy CV (5‑fold): {scores.mean():.3f} ± {scores.std():.3f}")
 
-# Guardar el modelo
-joblib.dump(model, 'model.pkl')
+# 6. Fit final y evaluación en test
+pipeline.fit(X_train, y_train)
+test_score = pipeline.score(X_test, y_test)
+print(f"Accuracy en test: {test_score:.3f}")
+
+# 7. Guardar pipeline completo
+joblib.dump(pipeline, 'model.pkl')
+print("Modelo entrenado y guardado como model.pkl")
